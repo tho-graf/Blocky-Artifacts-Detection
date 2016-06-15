@@ -121,11 +121,17 @@ var NRImage = (function () {
         return x + (y * this.width);
     };
     NRImage.prototype.detectBlockiness = function (threshold) {
+        var result_edges;
+        var result_casual;
         var result;
+        //result_edges = this.detectHardTransitions(1000);
+        //result_casual = this.detectHardTransitions(this.threshold);
         result = this.detectHardTransitions(this.threshold);
         //step over pixels. (rgba -> +4)
         for (var i = 0; i < this.pixels_out.length; i += 4) {
-            this.pixels_out[i] = this.pixels_out[i + 1] = this.pixels_out[i + 2] = result[i / 4];
+            //let value = (result_casual[i/4] && !result_edges[i/4]) ? 255 : 0;
+            var value = result[i / 4];
+            this.pixels_out[i] = this.pixels_out[i + 1] = this.pixels_out[i + 2] = value;
             //no opacity
             this.pixels_out[i + 3] = 255;
         }

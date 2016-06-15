@@ -117,7 +117,7 @@ class NRImage {
         this.detectBlockiness(this.threshold);
     }
 
-    detectHardTransitions(threshold: number) {
+    detectHardTransitions(threshold: number): Uint8ClampedArray {
         //let start: number = new Date().valueOf();
 
         var result: Uint8ClampedArray = new Uint8ClampedArray(this.width*this.height);
@@ -136,7 +136,7 @@ class NRImage {
         //console.log(secondsElapsed);
     }
 
-    checkVertical(x: number, y: number, threshold: number){
+    checkVertical(x: number, y: number, threshold: number): boolean{
         if (y < 2)
             return false;
         if (y == this.height-1)
@@ -148,7 +148,7 @@ class NRImage {
         return (a >= threshold) && (b >= threshold);
     }
 
-    checkHorizontal(x: number, y: number, threshold: number){
+    checkHorizontal(x: number, y: number, threshold: number): boolean{
         if (x < 2)
             return false;
         if (x == this.width-1)
@@ -160,26 +160,36 @@ class NRImage {
         return (c >= threshold) && (d >= threshold);
     }
 
-    getLuminance(red: number, green: number, blue: number) {
+    getLuminance(red: number, green: number, blue: number): number {
         return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
     }
 
-    getLuminanceVal(x: number, y: number) {
+    getLuminanceVal(x: number, y: number): number {
         return this.pixels_lum[this.coordinatesToIndex(x, y)];
     }
 
-    coordinatesToIndex(x: number, y: number) {
+    coordinatesToIndex(x: number, y: number): number{
         return x + (y * this.width);
     }
 
     detectBlockiness(threshold: number) {
+        var result_edges: Uint8ClampedArray;
+        var result_casual: Uint8ClampedArray;
+
         var result: Uint8ClampedArray;
+
+        //result_edges = this.detectHardTransitions(1000);
+        //result_casual = this.detectHardTransitions(this.threshold);
 
         result = this.detectHardTransitions(this.threshold);
 
         //step over pixels. (rgba -> +4)
         for (var i = 0; i < this.pixels_out.length; i += 4) {
-            this.pixels_out[i] = this.pixels_out[i+1] = this.pixels_out[i+2] = result[i/4];
+
+            //let value = (result_casual[i/4] && !result_edges[i/4]) ? 255 : 0;
+            let value = result[i/4];
+
+            this.pixels_out[i] = this.pixels_out[i+1] = this.pixels_out[i+2] = value;
             //no opacity
             this.pixels_out[i+3] = 255;
 
