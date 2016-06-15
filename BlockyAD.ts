@@ -17,6 +17,9 @@ class NRImage {
     imagedata_out: ImageData;
     ctx_out: CanvasRenderingContext2D;
     pixels_out: Uint8ClampedArray;
+    canvasDiv: HTMLDivElement;
+    upload: HTMLInputElement;
+    sliderValue: HTMLSpanElement;
 
     constructor(src: string) {
         this.threshold = 10;
@@ -26,12 +29,15 @@ class NRImage {
     }
 
     imageReady() {
+        document.body.innerHTML = '';
+
         this.width      = this.image.width;
         this.height     = this.image.height;
 
         // create HTML Elements
         this.canvas_in  = document.createElement("canvas");
         this.canvas_out = document.createElement("canvas");
+        this.canvasDiv = document.createElement("div");
 
         //set size for canvas and css.
         this.canvas_in.height   = this.canvas_out.height    = this.height;
@@ -41,19 +47,22 @@ class NRImage {
 
 
         //input canvas (set image)
-        document.body.appendChild(this.canvas_in);
+        this.canvasDiv.appendChild(this.canvas_in);
         this.ctx_in     = this.canvas_in.getContext("2d");
         this.ctx_in.drawImage(this.image, 0, 0, this.width, this.height);
         this.imagedata_in = this.ctx_in.getImageData(0,0,this.width, this.height);
         this.pixels_in  = this.imagedata_in.data;
 
         //output canvas (manipulate later)
-        document.body.appendChild(this.canvas_out);
+        this.canvasDiv.appendChild(this.canvas_out);
         this.ctx_out    = this.canvas_out.getContext("2d");
         this.imagedata_out = this.ctx_out.createImageData(this.width, this.height);
         this.pixels_out = this.imagedata_out.data;
 
+        document.body.appendChild(this.canvasDiv);
+
         this.generateSilder();
+        this.generateUpload();
 
         this.pixels_lum = new Uint8ClampedArray(this.width*this.height);
         this.pixels_result = new Uint8ClampedArray(this.width*this.height);
@@ -62,7 +71,7 @@ class NRImage {
         for (var i = 0; i < this.pixels_in.length; i += 4) {
             this.pixels_lum[i/4] = this.getLuminance(this.pixels_in[i], this.pixels_in[i+1], this.pixels_in[i+2])
         }
-        this.update();
+        this.detectBlockiness(this.threshold);
     }
 
     generateSilder() {
@@ -73,32 +82,61 @@ class NRImage {
         this.slider.value = "10";
 
         this.slider.oninput = (event) => this.changeThresholdCallback(event);
+        this.sliderValue = document.createElement("span");
+        this.sliderValue.innerHTML = String(this.threshold);
         document.body.appendChild(this.slider);
+        document.body.appendChild(this.sliderValue);
+
     }
 
-    changeThresholdCallback(event: Event) {
-        this.threshold = parseInt((event.target as any).value);
+    generateUpload() {
+        this.upload = document.createElement("input");
+        this.upload.type = "file";
+        this.upload.id = "imgFile";
+        document.body.appendChild(this.upload);
+        this.upload.addEventListener("change", ((imgRef) => {
+            return function () {
+                if (!this.files[0].type.match(/image.*/)) {
+                    throw "File Type must be an image";
+                }
+                let reader: FileReader = new FileReader();
+                reader.onload = (e: any) => {
+                    imgRef.src = e.target.result;
+                };
+                reader.readAsDataURL(this.files[0]);
+            }
+        })(this.image));
+
+    }
+
+    changeThresholdCallback(event: any) {
+        this.threshold = parseInt(event.target.value);
+        this.sliderValue.innerHTML = event.target.value;
         //value is a string -- if we don't parse it to int, it lagging heavily (30ms instead of 3ms)
         //this.threshold = (event.target as any).value;
-        this.update();
+        this.detectBlockiness(this.threshold);
     }
 
-    detectBlocks() {
+    detectHardTransitions(threshold: number) {
         //let start: number = new Date().valueOf();
+
+        var result: Uint8ClampedArray = new Uint8ClampedArray(this.width*this.height);
 
         for (var y = 0; y < this.height ; y++) {
             for (var x = 0; x < this.width; x++) {
                 let index = this.coordinatesToIndex(x, y);
-                this.pixels_result[index] = (this.checkVertical(x, y) || this.checkHorizontal(x, y)) ? 255 : 0;
+                result[index] = (this.checkVertical(x, y, threshold) || this.checkHorizontal(x, y, threshold)) ? 255 : 0;
             }
         }
+
+        return result;
 
         //let end: number = new Date().valueOf();
         //let secondsElapsed: number = (end - start) / 1000;
         //console.log(secondsElapsed);
     }
 
-    checkVertical(x: number, y: number){
+    checkVertical(x: number, y: number, threshold: number){
         if (y < 2)
             return false;
         if (y == this.height-1)
@@ -107,10 +145,10 @@ class NRImage {
         let a: number = (this.getLuminanceVal(x, y) - this.getLuminanceVal(x, y+1)) - (this.getLuminanceVal(x, y-1) - this.getLuminanceVal(x, y));
         let b: number = (this.getLuminanceVal(x, y) - this.getLuminanceVal(x, y+1)) - (this.getLuminanceVal(x, y+1) - this.getLuminanceVal(x, y-2));
 
-        return (a >= this.threshold) && (b >= this.threshold);
+        return (a >= threshold) && (b >= threshold);
     }
 
-    checkHorizontal(x: number, y: number){
+    checkHorizontal(x: number, y: number, threshold: number){
         if (x < 2)
             return false;
         if (x == this.width-1)
@@ -119,7 +157,7 @@ class NRImage {
         let c: number = (this.getLuminanceVal(x, y) - this.getLuminanceVal(x+1, y)) - (this.getLuminanceVal(x-1, y) - this.getLuminanceVal(x, y));
         let d: number = (this.getLuminanceVal(x, y) - this.getLuminanceVal(x+1, y)) - (this.getLuminanceVal(x+1, y) - this.getLuminanceVal(x-2, y));
 
-        return (c >= this.threshold) && (d >= this.threshold);
+        return (c >= threshold) && (d >= threshold);
     }
 
     getLuminance(red: number, green: number, blue: number) {
@@ -134,12 +172,14 @@ class NRImage {
         return x + (y * this.width);
     }
 
-    update() {
-        this.detectBlocks();
+    detectBlockiness(threshold: number) {
+        var result: Uint8ClampedArray;
+
+        result = this.detectHardTransitions(this.threshold);
 
         //step over pixels. (rgba -> +4)
         for (var i = 0; i < this.pixels_out.length; i += 4) {
-            this.pixels_out[i] = this.pixels_out[i+1] = this.pixels_out[i+2] = this.pixels_result[i/4];
+            this.pixels_out[i] = this.pixels_out[i+1] = this.pixels_out[i+2] = result[i/4];
             //no opacity
             this.pixels_out[i+3] = 255;
 
