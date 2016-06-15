@@ -1,3 +1,6 @@
+/**
+ * @author Thomas Kempel
+ */
 var NRImage = (function () {
     function NRImage(src) {
         var _this = this;

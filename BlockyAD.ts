@@ -1,3 +1,7 @@
+/**
+ * @author Thomas Kempel
+ */
+
 class NRImage {
     width: number;
     height: number;
