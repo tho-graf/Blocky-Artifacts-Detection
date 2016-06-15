@@ -3,7 +3,9 @@ Blocky Artifacts Detection Algorithm for Compressed Digital Image
 
 This is an implementation of the proposed method to detect blocky artifacts in paper [1].
 
-## How to use?
+## Preview
+
+Simply open image file and use slider to change threshold.
 
 ![alt tag](https://raw.githubusercontent.com/thomaskempel/Blocky-Artifacts-Detection/master/example.png)
 
