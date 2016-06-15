@@ -5,11 +5,8 @@ This is an implementation of the proposed method to detect blocky artifacts in p
 
 ## How to use?
 
-To load you own image, change the image src in Typescript-File *BlockyAD.ts*.
+![alt tag](https://raw.githubusercontent.com/thomaskempel/Blocky-Artifacts-Detection/master/example.png)
 
-`var img = new NRImage('.\\imgs\\compressed.png');`
-
-To play around with the threshold, just use the slider.
 
 
 [1] http://eprints.uthm.edu.my/6534/1/200.pdf
